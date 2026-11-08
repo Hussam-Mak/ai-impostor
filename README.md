@@ -171,4 +171,5 @@ tests/               pytest suite
 docs/                GitHub Pages project site (static)
 pages/               Pages build config (public server URL)
 render.yaml          public game server (Render blueprint)
+submission/          demo script (DEMO_SCRIPT.md) and Devpost write-up (DEVPOST.md)
 ```
