@@ -84,7 +84,7 @@ Set up the Space once:
 2. Add the two files from `deploy/huggingface/` (`Dockerfile`, `README.md`) to the Space.
 3. Space **Settings → Variables and secrets**: `DATABRICKS_HOST` (variable), `DATABRICKS_TOKEN` (secret; a personal
    access token with an expiry), optionally `DATABRICKS_WAREHOUSE_ID` to log games to Unity Catalog.
-4. If your Hugging Face username isn't `hussam-mak`, update `pages/config.js` to `https://<username>-ai-impostor.hf.space`.
+4. If your Hugging Face username isn't `hussammak`, update `pages/config.js` to `https://<username>-ai-impostor.hf.space`.
 
 Public-server safeguards: CORS limited to the Pages site, per-IP rate limits that ignore spoofable headers,
 an hourly cap on LLM calls (`IMPOSTOR_LLM_CALLS_PER_HOUR`, default 2000; over it the scripted bot answers),
