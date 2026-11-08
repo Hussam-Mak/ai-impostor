@@ -1,33 +1,17 @@
 # AI Impostor: demo video script
 
-A recorded screen demo with voiceover. **Length: about 2.5 minutes.** One person, no skit.
+A recorded screen demo with voiceover. **Length: about 2 minutes 15 seconds.** One person, no skit.
 
 ## Before you hit record
 
 1. **Wake the server:** open https://hussam-mak.github.io/ai-impostor/play/ and wait until the lobby loads fully, with the stats card filled in.
-2. **Warm the warehouse:** in Databricks, open a SQL editor on **Serverless Starter Warehouse** and run `SELECT 1`.
-3. **Open these tabs, in order:**
+2. **Open these tabs, in order:**
    1. Project site: https://hussam-mak.github.io/ai-impostor/
    2. Game: https://hussam-mak.github.io/ai-impostor/play/
-   3. Databricks SQL editor with this query pasted (don't run it yet):
-      ```sql
-      -- Last 1-on-1 game: who said what, and which persona the AI played
-      SELECT m.seq, m.sender_kind, g.persona, m.text
-      FROM workspace.ai_impostor.messages AS m
-      JOIN workspace.ai_impostor.games AS g USING (game_id)
-      WHERE g.started_at = (SELECT MAX(started_at) FROM workspace.ai_impostor.games)
-      ORDER BY m.seq;
-      ```
-      For the last group round instead:
-      ```sql
-      SELECT m.seq, m.alias, m.sender_kind, m.persona, m.text
-      FROM workspace.ai_impostor.room_messages AS m
-      JOIN workspace.ai_impostor.rooms AS r USING (room_id)
-      WHERE r.started_at = (SELECT MAX(started_at) FROM workspace.ai_impostor.rooms)
-      ORDER BY m.seq;
-      ```
-      A game is saved once its guess (1-on-1) or vote (group) is done, and can take a few seconds to show up.
-   4. Databricks **Catalog Explorer** open at `workspace` → `ai_impostor`, showing the tables.
+   3. Your group-chat table in Databricks Catalog Explorer (needs your Databricks login):
+      https://dbc-788fee3e-1b59.cloud.databricks.com/explore/data/workspace/ai_impostor/room_messages?o=7474657692011817
+      Click the **Sample Data** tab once so it's loaded. If it asks for a warehouse, pick **Serverless Starter Warehouse**.
+3. **Play one round right before recording**, so the table shows a fresh game. A game is saved once its guess or vote is done.
 4. **Zoom the browser to 125%** and close other tabs and notifications.
 5. **Group chat scene:** have a friend ready on their phone. Without one, record only the 1-on-1 scene and skip Scene 4.
 
@@ -88,24 +72,14 @@ A recorded screen demo with voiceover. **Length: about 2.5 minutes.** One person
 **Voiceover:**
 > At the end you mark everyone human or AI, and the reveal shows who was who and how everyone voted.
 
-## Scene 5: The Databricks side (1:45–2:20)
+## Scene 5: The Databricks side (1:45–2:05)
 
-**Screen:** Catalog Explorer showing the tables in `ai_impostor`.
-
-**Voiceover:**
-> Everything behind the game runs on Databricks. Every game, message and vote is saved live to **Unity Catalog** through a **SQL warehouse**.
-
-**Screen:** switch to the SQL editor and run the query. The round you just played appears.
+**Screen:** the `room_messages` table in Catalog Explorer, on the **Sample Data** tab. Slowly point the cursor at the `sender_kind` column (`human` / `ai`) and the `persona` column.
 
 **Voiceover:**
-> Here's the round I just played: every message, and which ones came from the AI.
+> Everything behind the game runs on Databricks. The AI is Llama on **Databricks Model Serving**, and every message and vote is saved live to **Unity Catalog**. Here's a real group chat: you can see which lines came from the AI and which persona it was playing. **Notebooks** and an **MLflow** model then learn to spot the AI from this data, and the whole thing deploys with one **Databricks Asset Bundle**.
 
-**Screen:** stay on the results, or briefly show the notebooks folder and the MLflow experiment if you have them open.
-
-**Voiceover:**
-> From there, notebooks build analytics on which personas fool people most and whether the AI is harder to catch in a group. An **MLflow** model learns to spot AI messages and is scored against the players. The whole setup deploys with one **Databricks Asset Bundle**, and a scheduled **Databricks Job** retrains the model.
-
-## Scene 6: Close (2:20–2:30)
+## Scene 6: Close (2:05–2:15)
 
 **Screen:** back to the project site hero.
 
