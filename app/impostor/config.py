@@ -44,7 +44,7 @@ class Settings:
     catalog: str
     schema: str
     local_data_dir: str
-    # Public hosting (GitHub Pages front end + a public server such as a Hugging Face Space)
+    # Public hosting (GitHub Pages front end + a public server on Render)
     allowed_origins: tuple[str, ...] = ()
     llm_calls_per_hour: int = 2000
     proxy_hops: int = 1  # reverse proxies in front of the app that append to X-Forwarded-For

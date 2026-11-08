@@ -1,0 +1,28 @@
+# Render Blueprint: the public AI Impostor game server (free web service).
+# Deploy: https://render.com/deploy?repo=https://github.com/Hussam-Mak/ai-impostor
+# The game page on GitHub Pages talks to this server; the AI and game logs live on Databricks.
+services:
+  - type: web
+    name: ai-impostor
+    runtime: python
+    plan: free
+    buildCommand: pip install -r app/requirements.txt
+    startCommand: python app/main.py
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: HOST
+        value: 0.0.0.0
+      - key: IMPOSTOR_ALLOWED_ORIGINS
+        value: https://hussam-mak.github.io
+      - key: IMPOSTOR_LOCAL_DATA_DIR
+        value: /tmp/impostor
+      # Entered in the Render dashboard when you deploy (never committed):
+      - key: DATABRICKS_HOST
+        sync: false
+      - key: DATABRICKS_TOKEN
+        sync: false
+      - key: DATABRICKS_WAREHOUSE_ID
+        sync: false

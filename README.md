@@ -75,20 +75,19 @@ Databricks Apps always require a workspace login, so the public version splits i
 | Piece | Where | Notes |
 | --- | --- | --- |
 | Game page | GitHub Pages `/play/` | Built by `.github/workflows/pages.yml` from `app/static`; server address in `pages/config.js` |
-| Game server | Hugging Face Docker Space | `deploy/huggingface/`: builds from this repo; same FastAPI app |
+| Game server | Render free web service | `render.yaml` blueprint; same FastAPI app, redeploys on every push |
 | AI impostor, logs, ML | Databricks | Model Serving, Unity Catalog, MLflow, same as above |
 
-Set up the Space once:
+Set up the server once:
 
-1. Create a free account at huggingface.co, then **New Space** → name `ai-impostor`, SDK **Docker** (blank), public.
-2. Add the two files from `deploy/huggingface/` (`Dockerfile`, `README.md`) to the Space.
-3. Space **Settings → Variables and secrets**: `DATABRICKS_HOST` (variable), `DATABRICKS_TOKEN` (secret; a personal
-   access token with an expiry), optionally `DATABRICKS_WAREHOUSE_ID` to log games to Unity Catalog.
-4. If your Hugging Face username isn't `hussammak`, update `pages/config.js` to `https://<username>-ai-impostor.hf.space`.
+1. Open https://render.com/deploy?repo=https://github.com/Hussam-Mak/ai-impostor and sign in with GitHub.
+2. When asked, enter `DATABRICKS_HOST` (your workspace URL), `DATABRICKS_TOKEN` (a personal access token with an
+   expiry) and `DATABRICKS_WAREHOUSE_ID` (to log games to Unity Catalog), then **Deploy Blueprint**.
+3. If the service URL isn't `https://ai-impostor.onrender.com`, update `pages/config.js` to match.
 
 Public-server safeguards: CORS limited to the Pages site, per-IP rate limits that ignore spoofable headers,
 an hourly cap on LLM calls (`IMPOSTOR_LLM_CALLS_PER_HOUR`, default 2000; over it the scripted bot answers),
-and caps on players, games and messages. Free Spaces sleep when idle; the game page shows "waking up" until
+and caps on players, games and messages. Free Render services sleep after 15 idle minutes; the game page shows "waking up" until
 the server answers.
 
 ## Run locally
@@ -158,5 +157,5 @@ databricks.yml       Asset Bundle
 tests/               pytest suite
 docs/                GitHub Pages project site (static)
 pages/               Pages build config (public server URL)
-deploy/huggingface/  public game server (Hugging Face Space)
+render.yaml          public game server (Render blueprint)
 ```

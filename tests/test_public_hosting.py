@@ -1,4 +1,4 @@
-"""Behavior needed when the server is public (GitHub Pages front end + Hugging Face Space)."""
+"""Behavior needed when the server is public (GitHub Pages front end + Render server)."""
 
 from __future__ import annotations
 
