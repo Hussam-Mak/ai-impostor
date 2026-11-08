@@ -110,7 +110,7 @@ Open http://localhost:8000. Open a second browser tab to play against yourself a
 If you are logged in with the Databricks CLI, set `DATABRICKS_CONFIG_PROFILE` and the local app uses the real
 LLM endpoint; set `DATABRICKS_WAREHOUSE_ID` too to log into Delta.
 
-Tests (87):
+Tests (94):
 
 ```bash
 .venv/Scripts/python -m pytest -q --cov=impostor
