@@ -63,8 +63,10 @@ def _workspace_client():  # -> WorkspaceClient | None
         return None
     try:
         from databricks.sdk import WorkspaceClient
+        from databricks.sdk.core import Config
 
-        return WorkspaceClient(http_timeout_seconds=LLM_HTTP_TIMEOUT_SECONDS)
+        # The timeout is a Config setting; WorkspaceClient() itself rejects it.
+        return WorkspaceClient(config=Config(http_timeout_seconds=LLM_HTTP_TIMEOUT_SECONDS))
     except Exception as exc:  # no host/credentials configured
         level = logging.ERROR if running_on_databricks_apps() else logging.WARNING
         log.log(level, "No Databricks workspace credentials (%s). Using the offline mock AI.", exc)
