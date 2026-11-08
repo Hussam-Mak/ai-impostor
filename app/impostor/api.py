@@ -24,7 +24,8 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 LLM_HTTP_TIMEOUT_SECONDS = 25
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
-        "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+        "default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; "
+        "font-src https://fonts.gstatic.com; script-src 'self'; "
         "connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
     ),
     "X-Content-Type-Options": "nosniff",

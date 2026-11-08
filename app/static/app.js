@@ -127,18 +127,21 @@ async function refreshLobby() {
       list.append(li);
     }
     const pct = (v) => (v === null || v === undefined ? "–" : `${Math.round(v * 100)}%`);
-    const rows = [
-      ["Games played", stats.games_finished],
-      ["Spot-the-AI accuracy", pct(stats.spot_the_ai_accuracy)],
-      ["Spot-the-human accuracy", pct(stats.spot_the_human_accuracy)],
-      ["AI fooled players", pct(stats.ai_fool_rate)],
+    const tiles = [
+      ["Games played", stats.games_finished, false],
+      ["AI fooled players", pct(stats.ai_fool_rate), true],
+      ["Spotted the AI", pct(stats.spot_the_ai_accuracy), false],
+      ["Spotted the human", pct(stats.spot_the_human_accuracy), false],
     ];
-    const dl = $("stats");
-    dl.textContent = "";
-    for (const [k, v] of rows) {
-      const dt = document.createElement("dt"); dt.textContent = k;
-      const dd = document.createElement("dd"); dd.textContent = v;
-      dl.append(dt, dd);
+    const grid = $("stats");
+    grid.textContent = "";
+    for (const [label, value, accent] of tiles) {
+      const tile = document.createElement("div");
+      tile.className = accent ? "kpi accent" : "kpi";
+      const v = document.createElement("div"); v.className = "v"; v.textContent = value;
+      const l = document.createElement("div"); l.className = "l"; l.textContent = label;
+      tile.append(v, l);
+      grid.append(tile);
     }
     $("runtime").textContent = health.mode === "databricks"
       ? "The AI runs on Databricks Model Serving. Games are logged to Unity Catalog."
@@ -215,6 +218,7 @@ async function cancelSearch() {
 /* ---------------------------------------------------------------- game */
 function enterGame(gameId) {
   stopTimers();
+  $("screen-game").classList.remove("closed");
   state.gameId = gameId;
   state.lastSeq = 0;
   state.status = "chatting";
@@ -299,6 +303,7 @@ function applyView(view) {
 }
 
 function showGuess(reason) {
+  $("screen-game").classList.add("closed");  // shrink the finished chat so the verdict is in view
   setComposerEnabled(false);
   $("message-form").hidden = true;
   $("guess-early").hidden = true;
@@ -316,6 +321,7 @@ function showGuess(reason) {
 
 function showResult(reveal, player) {
   stopTimers();
+  $("screen-game").classList.add("closed");
   $("guess-panel").hidden = true;
   $("message-form").hidden = true;
   $("guess-early").hidden = true;

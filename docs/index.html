@@ -7,12 +7,12 @@
   <meta name="description" content="A Turing-test chat game built on Databricks: talk to a stranger for two minutes, then guess if they were a human or an AI.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
   <header class="nav">
-    <a class="brand" href="#top"><span class="mark" aria-hidden="true">?</span>AI Impostor</a>
+    <a class="brand-pill" href="#top"><span class="dot" aria-hidden="true"></span>AI Impostor</a>
     <nav aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#databricks">Built on Databricks</a>
@@ -24,12 +24,12 @@
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
         <p class="eyebrow">TAMU Datathon 2026 · Databricks challenge</p>
-        <h1 id="hero-title">Human…<br>or <span class="accent">impostor?</span></h1>
+        <h1 id="hero-title">Human…<br>or <span class="mark">impostor?</span></h1>
         <p class="lede">Chat with a stranger for two minutes. It might be another player. It might be an LLM
           on Databricks pretending to be a sleep-deprived CS student. Then you decide.</p>
         <div class="cta-row">
-          <a class="btn primary" id="play-link" href="play/">Play now</a>
-          <a class="btn ghost" href="#run">Run it in your workspace</a>
+          <a class="btn yellow" id="play-link" href="play/">Play now</a>
+          <a class="btn" href="#run">Run it in your workspace</a>
         </div>
         <p class="note" id="play-note">No sign-up. The impostor runs on Databricks Model Serving, and every round is logged to Unity Catalog.</p>
       </div>
@@ -99,7 +99,7 @@
           <h3>Who gets fooled</h3>
           <p>Detection accuracy, fool rate per persona, accuracy vs. chat length, and how AI and human texting styles differ.</p>
         </article>
-        <article class="tile wide accent-tile">
+        <article class="tile wide dark">
           <p class="tile-tag">MLflow + UC model registry</p>
           <h3>Model vs. humans</h3>
           <p>A text classifier learns the "AI tells" from every message, gets registered in Unity Catalog, and is scored against the players on the same held-out games. An hourly Job retrains it as more rounds come in.</p>
