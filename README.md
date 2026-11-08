@@ -83,7 +83,7 @@ Set up the server once:
 1. Open https://render.com/deploy?repo=https://github.com/Hussam-Mak/ai-impostor and sign in with GitHub.
 2. When asked, enter `DATABRICKS_HOST` (your workspace URL), `DATABRICKS_TOKEN` (a personal access token with an
    expiry) and `DATABRICKS_WAREHOUSE_ID` (to log games to Unity Catalog), then **Deploy Blueprint**.
-3. If the service URL isn't `https://ai-impostor.onrender.com`, update `pages/config.js` to match.
+3. If the service URL isn't `https://ai-impostor-0qq1.onrender.com`, update `pages/config.js` to match.
 
 Public-server safeguards: CORS limited to the Pages site, per-IP rate limits that ignore spoofable headers,
 an hourly cap on LLM calls (`IMPOSTOR_LLM_CALLS_PER_HOUR`, default 2000; over it the scripted bot answers),
