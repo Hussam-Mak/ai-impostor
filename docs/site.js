@@ -1,7 +1,7 @@
 "use strict";
 
-// Set this to your Databricks App URL (Compute > Apps > ai-impostor) to make "Play now" open the game.
-const PLAY_URL = "https://ai-impostor-7474657692011817.aws.databricksapps.com";
+// The public game page (built from app/static by .github/workflows/pages.yml).
+const PLAY_URL = "play/";
 
 const SCRIPT = [
   { from: "me", text: "hey, quick question. are you a bot?" },
@@ -19,8 +19,6 @@ function setupPlayLink() {
   const link = document.getElementById("play-link");
   if (!PLAY_URL) return;
   link.href = PLAY_URL;
-  link.target = "_blank";
-  link.rel = "noopener";
 }
 
 function wait(ms) {

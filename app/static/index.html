@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Impostor</title>
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
   <header class="topbar">
@@ -26,6 +26,7 @@
           <input id="nickname" maxlength="20" autocomplete="off" placeholder="e.g. reveille" required>
           <button type="submit" class="primary">Find a stranger</button>
         </div>
+        <p class="hint" id="server-status" role="status" hidden>Waking up the game server… this can take up to a minute on the first visit.</p>
         <p class="hint" id="join-error" role="alert"></p>
         <p class="hint">Chats are saved anonymously (nickname + messages) to study how people spot AI. Don't share personal info.</p>
       </form>
@@ -93,6 +94,7 @@
   </main>
 
   <footer class="foot">Built on Databricks Apps · Model Serving · Unity Catalog · MLflow</footer>
-  <script src="/static/app.js"></script>
+  <script src="static/config.js"></script>
+  <script src="static/app.js"></script>
 </body>
 </html>

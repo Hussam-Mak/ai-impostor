@@ -2,6 +2,10 @@
 
 // One player per browser tab (sessionStorage), so two tabs can play each other.
 const POLL_MS = 1000;
+const WAKE_RETRY_MS = 5000;
+// Empty when this page is served by the game server itself; set in static/config.js
+// when the page is hosted elsewhere (GitHub Pages) and talks to a remote server.
+const API_BASE = String(window.IMPOSTOR_API_BASE || "").replace(/\/+$/, "");
 const $ = (id) => document.getElementById(id);
 
 const state = {
@@ -23,11 +27,16 @@ class ApiError extends Error {
 }
 
 async function api(path, body, method = body ? "POST" : "GET") {
-  const res = await fetch(path, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(API_BASE + path, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, "Can't reach the game server. Check your connection and try again.");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = typeof data.detail === "string" ? data.detail : "Something went wrong.";
@@ -76,6 +85,25 @@ function handleError(err, target) {
 }
 
 /* ---------------------------------------------------------------- lobby */
+function setServerReady(ready) {
+  $("join-form").querySelector("button").disabled = !ready;
+  $("server-status").hidden = ready;
+}
+
+// Free hosts put the server to sleep when idle; the first request wakes it (can take a minute).
+async function waitForServer() {
+  for (;;) {
+    try {
+      await api("/api/health");
+      setServerReady(true);
+      return;
+    } catch {
+      setServerReady(false);
+      await new Promise((resolve) => setTimeout(resolve, WAKE_RETRY_MS));
+    }
+  }
+}
+
 async function refreshLobby() {
   try {
     const [board, stats, health] = await Promise.all([
@@ -359,3 +387,4 @@ for (const b of document.querySelectorAll(".choice")) {
   b.addEventListener("click", () => guess(b.dataset.guess));
 }
 toLobby();
+waitForServer().then(refreshLobby);

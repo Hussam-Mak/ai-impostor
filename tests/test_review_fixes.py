@@ -151,7 +151,7 @@ def test_client_key_prefers_the_databricks_user():
         headers = {"x-forwarded-email": "Me@TAMU.edu", "x-forwarded-for": "1.2.3.4"}
         client = None
 
-    assert client_key(Req()) == "user:me@tamu.edu"
+    assert client_key(Req(), on_databricks=True) == "user:me@tamu.edu"
 
 
 # ------------------------------------------------------------------ storage

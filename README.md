@@ -2,7 +2,7 @@
 
 **Chat with a stranger for two minutes. Then decide: human, or AI?**
 
-**Project site:** https://hussam-mak.github.io/ai-impostor/ · **Play:** https://ai-impostor-7474657692011817.aws.databricksapps.com (Databricks App; workspace sign-in required)
+**Play (no sign-up):** https://hussam-mak.github.io/ai-impostor/play/ · **Project site:** https://hussam-mak.github.io/ai-impostor/ · Workspace version: https://ai-impostor-7474657692011817.aws.databricksapps.com
 
 AI Impostor is a Turing-test game built entirely on Databricks. Each round pairs you with either another
 player or an LLM pretending to be a person. You chat, you guess, and every message and verdict lands in
@@ -68,6 +68,29 @@ Options (pass with `--var name=value`): `catalog` (default `workspace`), `schema
 `llm_endpoint` (any chat endpoint listed under **Serving**). If you change `catalog` or `schema`, also change
 them in `app/app.yaml`.
 
+## Public deployment (anyone can play)
+
+Databricks Apps always require a workspace login, so the public version splits in two:
+
+| Piece | Where | Notes |
+| --- | --- | --- |
+| Game page | GitHub Pages `/play/` | Built by `.github/workflows/pages.yml` from `app/static`; server address in `pages/config.js` |
+| Game server | Hugging Face Docker Space | `deploy/huggingface/`: builds from this repo; same FastAPI app |
+| AI impostor, logs, ML | Databricks | Model Serving, Unity Catalog, MLflow, same as above |
+
+Set up the Space once:
+
+1. Create a free account at huggingface.co, then **New Space** → name `ai-impostor`, SDK **Docker** (blank), public.
+2. Add the two files from `deploy/huggingface/` (`Dockerfile`, `README.md`) to the Space.
+3. Space **Settings → Variables and secrets**: `DATABRICKS_HOST` (variable), `DATABRICKS_TOKEN` (secret; a personal
+   access token with an expiry), optionally `DATABRICKS_WAREHOUSE_ID` to log games to Unity Catalog.
+4. If your Hugging Face username isn't `hussam-mak`, update `pages/config.js` to `https://<username>-ai-impostor.hf.space`.
+
+Public-server safeguards: CORS limited to the Pages site, per-IP rate limits that ignore spoofable headers,
+an hourly cap on LLM calls (`IMPOSTOR_LLM_CALLS_PER_HOUR`, default 2000; over it the scripted bot answers),
+and caps on players, games and messages. Free Spaces sleep when idle; the game page shows "waking up" until
+the server answers.
+
 ## Run locally
 
 Without Databricks credentials the game runs offline with a scripted mock AI and logs to `local_data/games.jsonl`.
@@ -88,7 +111,7 @@ Open http://localhost:8000. Open a second browser tab to play against yourself a
 If you are logged in with the Databricks CLI, set `DATABRICKS_CONFIG_PROFILE` and the local app uses the real
 LLM endpoint; set `DATABRICKS_WAREHOUSE_ID` too to log into Delta.
 
-Tests (56, ~89% coverage):
+Tests (64):
 
 ```bash
 .venv/Scripts/python -m pytest -q --cov=impostor
@@ -134,4 +157,6 @@ resources/           bundle resources: app, jobs
 databricks.yml       Asset Bundle
 tests/               pytest suite
 docs/                GitHub Pages project site (static)
+pages/               Pages build config (public server URL)
+deploy/huggingface/  public game server (Hugging Face Space)
 ```

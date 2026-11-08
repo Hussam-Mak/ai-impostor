@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -80,20 +81,30 @@ def build_services(settings: Settings) -> tuple[GameManager, dict]:
         if running_on_databricks_apps():
             log.error("DATABRICKS_WAREHOUSE_ID is not set; games go to local JSONL and are lost on restart.")
         recorder = JsonlRecorder(settings.local_data_dir, settings.llm_endpoint)
-    responder = AIResponder(model)
+    budget = RateLimiter(limit=settings.llm_calls_per_hour, window_seconds=3600) if client else None
+    responder = AIResponder(model, budget=budget)
     manager = GameManager(settings, on_ai_turn=responder.on_ai_turn, on_game_finished=recorder.record)
     responder.bind(manager)
     log.info("AI Impostor ready (AI: %s)", settings.llm_endpoint if client else "mock")
     return manager, {"mode": "databricks" if client else "offline"}
 
 
-def client_key(request: Request) -> str:
-    """Who is calling: the signed-in Databricks user if the Apps proxy says so, else the IP."""
+def client_key(request: Request, *, on_databricks: bool | None = None, proxy_hops: int = 1) -> str:
+    """Who is calling, for rate limits.
+
+    Only the Databricks Apps proxy sets X-Forwarded-Email, so it is trusted only there.
+    Elsewhere the client IP is the X-Forwarded-For entry our own proxy appended
+    (counted from the right); entries further left are set by the client.
+    """
+    trust_email = running_on_databricks_apps() if on_databricks is None else on_databricks
     email = request.headers.get("x-forwarded-email")
-    if email:
+    if trust_email and email:
         return f"user:{email.lower()}"
-    forwarded = request.headers.get("x-forwarded-for", "")
-    ip = forwarded.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    hops = [part.strip() for part in request.headers.get("x-forwarded-for", "").split(",") if part.strip()]
+    if hops and proxy_hops > 0:
+        ip = hops[-min(proxy_hops, len(hops))]
+    else:
+        ip = request.client.host if request.client else "unknown"
     return f"ip:{ip}"
 
 
@@ -102,13 +113,27 @@ def create_app(
     info: dict | None = None,
     join_limiter: RateLimiter | None = None,
     match_limiter: RateLimiter | None = None,
+    settings: Settings | None = None,
 ) -> FastAPI:
     if manager is None:
-        manager, info = build_services(load_settings())
+        settings = settings or load_settings()
+        manager, info = build_services(settings)
     runtime_info = info or {}
+    origins = list(settings.allowed_origins) if settings else []
+    proxy_hops = settings.proxy_hops if settings else 1
     joins = join_limiter or RateLimiter(limit=10, window_seconds=60)
     matches = match_limiter or RateLimiter(limit=30, window_seconds=60)
     app = FastAPI(title="AI Impostor", docs_url=None, redoc_url=None, openapi_url=None)
+    if origins:
+        # Lets the GitHub Pages front end call this server. No cookies are involved.
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_methods=["GET", "POST"],
+            allow_headers=["Content-Type"],
+            allow_credentials=False,
+            max_age=600,
+        )
 
     @app.middleware("http")
     async def _security_headers(request: Request, call_next):
@@ -122,7 +147,7 @@ def create_app(
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
     def limit(limiter: RateLimiter, request: Request) -> None:
-        if not limiter.allow(client_key(request)):
+        if not limiter.allow(client_key(request, proxy_hops=proxy_hops)):
             raise HTTPException(429, "Too many requests. Take a breather and try again.")
 
     @app.get("/api/health")

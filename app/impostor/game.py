@@ -355,9 +355,11 @@ class GameManager:
                 if game.chat_closed_at is not None:
                     game.ai_pending = False
                     return False
-                if text:
-                    game.messages.append(Message(len(game.messages) + 1, AI_SENDER, text, self._clock()))
                 newer_human = any(m.sender != AI_SENDER for m in game.messages[snapshot_seq:])
+                # An opening "hey" is stale once the human has already spoken; reply to them instead.
+                stale_opener = snapshot_seq == 0 and newer_human
+                if text and not stale_opener:
+                    game.messages.append(Message(len(game.messages) + 1, AI_SENDER, text, self._clock()))
                 game.ai_pending = newer_human
                 return newer_human
         finally:

@@ -44,6 +44,10 @@ class Settings:
     catalog: str
     schema: str
     local_data_dir: str
+    # Public hosting (GitHub Pages front end + a public server such as a Hugging Face Space)
+    allowed_origins: tuple[str, ...] = ()
+    llm_calls_per_hour: int = 2000
+    proxy_hops: int = 1  # reverse proxies in front of the app that append to X-Forwarded-For
 
 
 def load_settings() -> Settings:
@@ -69,4 +73,9 @@ def load_settings() -> Settings:
         catalog=_identifier("IMPOSTOR_CATALOG", "workspace"),
         schema=_identifier("IMPOSTOR_SCHEMA", "ai_impostor"),
         local_data_dir=os.getenv("IMPOSTOR_LOCAL_DATA_DIR", "local_data"),
+        allowed_origins=tuple(
+            o.strip().rstrip("/") for o in os.getenv("IMPOSTOR_ALLOWED_ORIGINS", "").split(",") if o.strip()
+        ),
+        llm_calls_per_hour=int(_float("IMPOSTOR_LLM_CALLS_PER_HOUR", 2000)),
+        proxy_hops=int(_float("IMPOSTOR_PROXY_HOPS", 1)),
     )

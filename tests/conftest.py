@@ -87,3 +87,12 @@ def harness() -> Harness:
 @pytest.fixture
 def make_harness():
     return Harness
+
+
+@pytest.fixture
+def client(harness):
+    from fastapi.testclient import TestClient
+
+    from impostor.api import create_app
+
+    return TestClient(create_app(harness.manager, {"mode": "test"}))

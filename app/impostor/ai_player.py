@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Callable, Protocol
 
 from .personas import Persona
+from .ratelimit import RateLimiter
 
 if TYPE_CHECKING:
     from databricks.sdk import WorkspaceClient
@@ -173,8 +174,11 @@ class AIResponder:
         executor: ThreadPoolExecutor | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        budget: RateLimiter | None = None,
     ) -> None:
         self._model = model
+        self._budget = budget  # caps paid LLM calls; over budget, the scripted bot answers
+        self._fallback = MockChatModel()
         self._rng = rng or random.Random()
         self._executor = executor or ThreadPoolExecutor(max_workers=AI_WORKERS, thread_name_prefix="ai-player")
         self._sleep = sleep
@@ -205,8 +209,12 @@ class AIResponder:
 
     def _reply(self, turn: AITurn) -> str:
         started = self._clock()
+        model = self._model
+        if self._budget is not None and not self._budget.allow("llm"):
+            log.warning("LLM budget reached; game %s gets a scripted reply", turn.game_id)
+            model = self._fallback
         try:
-            raw = self._model.complete(
+            raw = model.complete(
                 build_system_prompt(turn.persona, turn.seconds_left), to_model_messages(turn.history)
             )
         except Exception:
