@@ -38,7 +38,11 @@ MIN_PER_CLASS = 20
 
 # COMMAND ----------
 
-messages = spark.table(f"{fq}.messages").select("game_id", "seq", "sender_kind", "sender_nickname", "text").toPandas()
+columns = ["game_id", "seq", "sender_kind", "sender_nickname", "text"]
+one_on_one = spark.table(f"{fq}.messages").select(*columns)
+# Group chat messages train the detector too; room_id plays the role of game_id for the split.
+group = spark.table(f"{fq}.room_messages").withColumnRenamed("room_id", "game_id").select(*columns)
+messages = one_on_one.unionByName(group).toPandas()
 messages["label"] = (messages["sender_kind"] == "ai").astype(int)
 counts = messages["label"].value_counts().to_dict()
 print(f"Messages: {len(messages)} · AI: {counts.get(1, 0)} · human: {counts.get(0, 0)}")

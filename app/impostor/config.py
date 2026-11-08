@@ -48,6 +48,7 @@ class Settings:
     allowed_origins: tuple[str, ...] = ()
     llm_calls_per_hour: int = 2000
     proxy_hops: int = 1  # reverse proxies in front of the app that append to X-Forwarded-For
+    room_seconds: float = 180.0  # group chat length
 
 
 def load_settings() -> Settings:
@@ -78,4 +79,5 @@ def load_settings() -> Settings:
         ),
         llm_calls_per_hour=int(_float("IMPOSTOR_LLM_CALLS_PER_HOUR", 2000)),
         proxy_hops=int(_float("IMPOSTOR_PROXY_HOPS", 1)),
+        room_seconds=_float("IMPOSTOR_ROOM_SECONDS", 180.0),
     )

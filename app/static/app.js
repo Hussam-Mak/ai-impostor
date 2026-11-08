@@ -20,6 +20,8 @@ const state = {
   tickTimer: null,
   busy: false,
   guessingEarly: false,
+  mode: "solo", // "solo" (1-on-1) or "group"
+  roomId: null,
 };
 
 class ApiError extends Error {
@@ -46,7 +48,7 @@ async function api(path, body, method = body ? "POST" : "GET") {
 }
 
 function show(screen) {
-  for (const id of ["screen-lobby", "screen-search", "screen-game"]) $(id).hidden = id !== screen;
+  for (const id of ["screen-lobby", "screen-search", "screen-game", "screen-room"]) $(id).hidden = id !== screen;
 }
 
 function stopTimers() {
@@ -86,7 +88,7 @@ function handleError(err, target) {
 
 /* ---------------------------------------------------------------- lobby */
 function setServerReady(ready) {
-  $("join-form").querySelector("button").disabled = !ready;
+  for (const b of document.querySelectorAll("#join-form button")) b.disabled = !ready;
   $("server-status").hidden = ready;
 }
 
@@ -154,6 +156,7 @@ async function refreshLobby() {
 function toLobby(message = "") {
   stopTimers();
   state.gameId = null;
+  state.roomId = null;
   show("screen-lobby");
   $("join-error").textContent = message;
   if (state.nickname) $("nickname").value = state.nickname;
@@ -161,10 +164,14 @@ function toLobby(message = "") {
   refreshLobby();
 }
 
-async function join(event) {
-  event.preventDefault();
-  const nickname = $("nickname").value.trim();
-  if (!nickname) return;
+// Registers the nickname if needed. Shared by 1-on-1 and group mode.
+async function ensurePlayer() {
+  const input = $("nickname");
+  const nickname = input.value.trim();
+  if (!nickname) {
+    input.reportValidity();
+    return false;
+  }
   $("join-error").textContent = "";
   try {
     if (!state.playerId || nickname !== state.nickname) {
@@ -175,16 +182,29 @@ async function join(event) {
       sessionStorage.setItem("impostor.nickname", state.nickname);
     }
     renderMe();
-    await findMatch();
+    return true;
   } catch (err) {
     handleError(err, "join-error");
+    return false;
   }
+}
+
+async function join(event) {
+  event.preventDefault();
+  if (await ensurePlayer()) await findMatch();
+}
+
+function showSearch(title, subtitle) {
+  $("search-title").textContent = title;
+  $("search-sub").textContent = subtitle;
+  show("screen-search");
 }
 
 /* ------------------------------------------------------------ matching */
 async function findMatch() {
   stopTimers();
-  show("screen-search");
+  state.mode = "solo";
+  showSearch("Connecting you to a stranger…", "Could be a person. Could be a machine.");
   try {
     const res = await api("/api/match", { player_id: state.playerId });
     onMatchStatus(res);
@@ -211,7 +231,8 @@ async function pollMatch() {
 
 async function cancelSearch() {
   stopTimers();
-  try { await api("/api/match/cancel", { player_id: state.playerId }); } catch (err) { handleError(err); }
+  const path = state.mode === "group" ? "/api/rooms/cancel" : "/api/match/cancel";
+  try { await api(path, { player_id: state.playerId }); } catch (err) { handleError(err); }
   toLobby();
 }
 

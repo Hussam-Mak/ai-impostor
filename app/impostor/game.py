@@ -564,6 +564,32 @@ class GameManager:
                 log.exception("Game callback failed")
 
     # ------------------------------------------------------------------- stats
+    # ------------------------------------------------- shared with group rooms
+    def player_nickname(self, player_id: str) -> str:
+        """Validate a player (marks them active) and return their nickname."""
+        with self._lock:
+            return self._player(player_id).nickname
+
+    def player_stats(self, player_id: str) -> dict:
+        with self._lock:
+            return self._player_stats(self._player(player_id))
+
+    def award_room(self, player_id: str, points: int, perfect: bool) -> dict:
+        """Add a group-room result to the shared score, streak and leaderboard."""
+        with self._lock:
+            player = self._players.get(player_id)
+            if player is None:
+                return {}
+            player.games_played += 1
+            player.score += points
+            if perfect:
+                player.correct += 1
+                player.streak += 1
+                player.best_streak = max(player.best_streak, player.streak)
+            else:
+                player.streak = 0
+            return self._player_stats(player)
+
     def leaderboard(self, limit: int = 10) -> list[dict]:
         with self._lock:
             ranked = sorted(

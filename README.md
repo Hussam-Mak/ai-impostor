@@ -14,7 +14,7 @@ Unity Catalog, where a model learns to spot the impostor and is scored against t
 | --- | --- |
 | The game (web UI + API) | **Databricks Apps** (FastAPI, `app/`) |
 | The impostor | **Foundation Model APIs / Model Serving** (`databricks-meta-llama-3-3-70b-instruct` by default), with four human personas, typos and typing delays |
-| Game logs | **Unity Catalog Delta tables** `games`, `messages`, `guesses`, written through a **SQL warehouse** with parameterized SQL |
+| Game logs | **Unity Catalog Delta tables** `games`, `messages`, `guesses` (1-on-1) and `rooms`, `room_seats`, `room_messages`, `room_votes` (group chat), written through a **SQL warehouse** with parameterized SQL |
 | Analytics | Notebook `01_game_analytics` builds UC views: detection accuracy, persona fool rate, accuracy vs. chat length, AI vs. human writing style. Ready for an **AI/BI dashboard** or **Genie** space |
 | "Can a model beat people?" | Notebook `02_train_ai_detector` trains a text classifier with **MLflow**, registers it in the **UC model registry**, and compares it with player accuracy on held-out games |
 | Deploy + scheduling | **Asset Bundle** (`databricks.yml`) with the app, a setup job, and an hourly insights **Job** |
@@ -110,13 +110,15 @@ Open http://localhost:8000. Open a second browser tab to play against yourself a
 If you are logged in with the Databricks CLI, set `DATABRICKS_CONFIG_PROFILE` and the local app uses the real
 LLM endpoint; set `DATABRICKS_WAREHOUSE_ID` too to log into Delta.
 
-Tests (64):
+Tests (87):
 
 ```bash
 .venv/Scripts/python -m pytest -q --cov=impostor
 ```
 
 ## Game rules
+
+**1-on-1**
 
 - Matchmaking waits 3–9 seconds (random, so timing doesn't give the answer away). If another player is
   waiting, you're paired with them 60% of the time; otherwise you get the AI.
@@ -125,6 +127,16 @@ Tests (64):
 - In human-vs-human rounds, both players guess about each other, so you score by spotting humans *and*
   by seeming human yourself.
 
+**Group chat**
+
+- 1–5 players join a room; it fills with 1–3 hidden AI impostors (each a different persona). Everyone,
+  human or AI, gets a random alias, and nobody is told how many AIs there are.
+- 3-minute group chat. After every message the server picks at most one AI that might reply: it favors
+  whoever was just mentioned by name, skips whoever spoke last, and the model may answer `PASS` to stay
+  quiet. If the room goes silent, an AI may break the silence.
+- Then a 45-second vote: mark every other member human or AI. 50 points per correct mark, +50 for a
+  perfect ballot, and +25 for each other player who judged *you* human.
+
 ## Settings
 
 | Env var | Default | Meaning |
@@ -132,7 +144,8 @@ Tests (64):
 | `LLM_ENDPOINT` | `databricks-meta-llama-3-3-70b-instruct` | Serving endpoint for the impostor |
 | `DATABRICKS_WAREHOUSE_ID` | – | Warehouse for Delta logging (unset = local JSONL) |
 | `IMPOSTOR_CATALOG` / `IMPOSTOR_SCHEMA` | `workspace` / `ai_impostor` | Where tables live |
-| `IMPOSTOR_ROUND_SECONDS` | `120` | Chat length |
+| `IMPOSTOR_ROUND_SECONDS` | `120` | 1-on-1 chat length |
+| `IMPOSTOR_ROOM_SECONDS` | `180` | Group chat length |
 | `IMPOSTOR_HUMAN_MATCH_PROBABILITY` | `0.6` | Chance to pair with a waiting human |
 | `IMPOSTOR_MATCH_WAIT_MIN` / `_MAX` | `3` / `9` | Matchmaking wait range (seconds) |
 | `IMPOSTOR_OFFLINE` | – | `1` forces the mock AI |

@@ -109,3 +109,64 @@ GROUP BY player_nickname
 ORDER BY points DESC
 """)
 display(spark.table(f"{fq}.v_leaderboard").limit(20))
+
+# COMMAND ----------
+
+# MAGIC %md ## Group chat: is the AI harder to catch in a crowd?
+# MAGIC Fool rate = share of votes that called an AI "human". Compared with one-on-one rounds.
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE OR REPLACE VIEW {fq}.v_crowd_vs_solo AS
+SELECT 'one-on-one' AS mode,
+       COUNT(*) AS judgments,
+       ROUND(AVG(CASE WHEN guess = 'human' THEN 1.0 ELSE 0.0 END), 3) AS ai_fool_rate
+FROM {fq}.guesses WHERE opponent_type = 'ai'
+UNION ALL
+SELECT 'group' AS mode,
+       COUNT(*) AS judgments,
+       ROUND(AVG(CASE WHEN vote = 'human' THEN 1.0 ELSE 0.0 END), 3) AS ai_fool_rate
+FROM {fq}.room_votes WHERE target_kind = 'ai'
+""")
+display(spark.table(f"{fq}.v_crowd_vs_solo"))
+
+# COMMAND ----------
+
+# MAGIC %md ## Group chat: which personas survive the vote, and does talking more give the AI away?
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE OR REPLACE VIEW {fq}.v_room_persona_survival AS
+SELECT s.persona,
+       COUNT(*)                                                    AS ai_seats,
+       SUM(s.votes)                                                AS votes_received,
+       ROUND(1 - SUM(s.voted_ai) / NULLIF(SUM(s.votes), 0), 3)      AS survival_rate,
+       ROUND(AVG(m.lines), 1)                                      AS avg_lines_per_room
+FROM {fq}.room_seats s
+LEFT JOIN (
+  SELECT room_id, alias, COUNT(*) AS lines FROM {fq}.room_messages GROUP BY room_id, alias
+) m ON s.room_id = m.room_id AND s.alias = m.alias
+WHERE s.sender_kind = 'ai'
+GROUP BY s.persona
+ORDER BY survival_rate DESC
+""")
+display(spark.table(f"{fq}.v_room_persona_survival"))
+
+spark.sql(f"""
+CREATE OR REPLACE VIEW {fq}.v_room_talkativeness AS
+SELECT s.sender_kind,
+       CASE WHEN COALESCE(m.lines, 0) <= 2 THEN '0-2 lines'
+            WHEN m.lines <= 6 THEN '3-6 lines'
+            ELSE '7+ lines' END                                      AS talkativeness,
+       COUNT(*)                                                     AS seats,
+       ROUND(SUM(s.voted_ai) / NULLIF(SUM(s.votes), 0), 3)          AS share_voted_ai
+FROM {fq}.room_seats s
+LEFT JOIN (
+  SELECT room_id, alias, COUNT(*) AS lines FROM {fq}.room_messages GROUP BY room_id, alias
+) m ON s.room_id = m.room_id AND s.alias = m.alias
+GROUP BY 1, 2
+ORDER BY 1, 2
+""")
+display(spark.table(f"{fq}.v_room_talkativeness"))

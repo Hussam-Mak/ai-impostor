@@ -1,4 +1,4 @@
-"""Persist finished games.
+"""Persist finished games and group rooms.
 
 On Databricks: parameterized INSERTs into Unity Catalog Delta tables through a
 SQL warehouse (Statement Execution API). Locally: one JSON line per game.
@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Callable, Protocol
 
 from .game import AI_SENDER, GameRecord
+from .rooms import RoomRecord
 
 if TYPE_CHECKING:
     from databricks.sdk import WorkspaceClient
@@ -31,10 +32,13 @@ STATEMENT_POLL_SECONDS = 5.0
 STATEMENT_MAX_WAIT_SECONDS = 300.0
 # Write games last: a games row then means its messages and guesses are in.
 TABLE_WRITE_ORDER = ("messages", "guesses", "games")
+ROOM_TABLE_WRITE_ORDER = ("room_messages", "room_seats", "room_votes", "rooms")
 
 
 class GameRecorder(Protocol):
     def record(self, game: GameRecord) -> None: ...
+
+    def record_room(self, room: RoomRecord) -> None: ...
 
 
 def iso(ts: float) -> str:
@@ -86,9 +90,57 @@ def record_rows(game: GameRecord, llm_endpoint: str) -> dict[str, list[dict]]:
     return {"games": games, "messages": messages, "guesses": guesses}
 
 
+def room_rows(room: RoomRecord, llm_endpoint: str) -> dict[str, list[dict]]:
+    """Flatten a finished group room into rows for the four room tables."""
+    seats = {s.alias: s for s in room.seats}
+    judged: dict[str, list[str]] = {}
+    for _voter, alias, vote in room.votes:
+        judged.setdefault(alias, []).append(vote)
+    rooms = [{
+        "room_id": room.room_id,
+        "llm_endpoint": llm_endpoint,
+        "started_at": iso(room.started_at),
+        "chat_closed_at": iso(room.chat_closed_at),
+        "finished_at": iso(room.finished_at),
+        "human_count": sum(1 for s in room.seats if s.kind == "human"),
+        "ai_count": sum(1 for s in room.seats if s.kind == "ai"),
+        "message_count": len(room.messages),
+    }]
+    room_seats = [{
+        "room_id": room.room_id,
+        "alias": s.alias,
+        "sender_kind": s.kind,
+        "persona": s.persona_key,
+        "player_nickname": s.nickname,
+        "voted_ai": sum(1 for v in judged.get(s.alias, []) if v == "ai"),
+        "votes": len(judged.get(s.alias, [])),
+    } for s in room.seats]
+    room_messages = [{
+        "room_id": room.room_id,
+        "seq": m.seq,
+        "alias": m.alias,
+        "sender_kind": seats[m.alias].kind if m.alias in seats else None,
+        "persona": seats[m.alias].persona_key if m.alias in seats else None,
+        "sender_nickname": seats[m.alias].nickname if m.alias in seats else None,
+        "text": m.text,
+        "sent_at": iso(m.sent_at),
+    } for m in room.messages]
+    room_votes = [{
+        "room_id": room.room_id,
+        "voter_nickname": voter,
+        "target_alias": alias,
+        "target_kind": seats[alias].kind if alias in seats else None,
+        "target_persona": seats[alias].persona_key if alias in seats else None,
+        "vote": vote,
+        "correct": (alias in seats and seats[alias].kind == vote),
+    } for voter, alias, vote in room.votes]
+    return {"rooms": rooms, "room_seats": room_seats, "room_messages": room_messages, "room_votes": room_votes}
+
+
 _SQL_TYPES = {"started_at": "TIMESTAMP", "chat_closed_at": "TIMESTAMP", "finished_at": "TIMESTAMP",
               "sent_at": "TIMESTAMP", "guessed_at": "TIMESTAMP", "seq": "INT", "player_count": "INT",
-              "message_count": "INT", "points": "INT", "correct": "BOOLEAN"}
+              "message_count": "INT", "points": "INT", "correct": "BOOLEAN", "human_count": "INT",
+              "ai_count": "INT", "voted_ai": "INT", "votes": "INT"}
 
 
 def build_insert(table: str, rows: list[dict]) -> tuple[str, list[tuple[str, str | None, str]]]:
@@ -135,21 +187,27 @@ class DeltaRecorder:
         self._slots = threading.BoundedSemaphore(MAX_PENDING_WRITES)
 
     def record(self, game: GameRecord) -> None:
-        if not self._slots.acquire(blocking=False):
-            log.error("Delta write queue full; dropping game %s", game.game_id)
-            return
-        self._executor.submit(self._write, game)
+        self._enqueue(f"game {game.game_id}", lambda: record_rows(game, self._llm_endpoint), TABLE_WRITE_ORDER)
 
-    def _write(self, game: GameRecord) -> None:
+    def record_room(self, room: RoomRecord) -> None:
+        self._enqueue(f"room {room.room_id}", lambda: room_rows(room, self._llm_endpoint), ROOM_TABLE_WRITE_ORDER)
+
+    def _enqueue(self, label: str, build: Callable[[], dict[str, list[dict]]], order: tuple[str, ...]) -> None:
+        if not self._slots.acquire(blocking=False):
+            log.error("Delta write queue full; dropping %s", label)
+            return
+        self._executor.submit(self._write, label, build, order)
+
+    def _write(self, label: str, build: Callable[[], dict[str, list[dict]]], order: tuple[str, ...]) -> None:
         try:
-            rows_by_table = record_rows(game, self._llm_endpoint)
-            for table in TABLE_WRITE_ORDER:
+            rows_by_table = build()
+            for table in order:
                 rows = rows_by_table[table]
                 for start in range(0, len(rows), ROWS_PER_INSERT):
                     sql, params = build_insert(f"{self._prefix}.`{table}`", rows[start : start + ROWS_PER_INSERT])
                     self._execute(sql, params)
         except Exception:
-            log.exception("Failed to write game %s to Delta", game.game_id)
+            log.exception("Failed to write %s to Delta", label)
         finally:
             self._slots.release()
 
@@ -192,9 +250,15 @@ class JsonlRecorder:
         return self._path
 
     def record(self, game: GameRecord) -> None:
+        self._append({"record": asdict(game), "rows": record_rows(game, self._llm_endpoint)}, f"game {game.game_id}")
+
+    def record_room(self, room: RoomRecord) -> None:
+        self._append({"room": room.room_id, "rows": room_rows(room, self._llm_endpoint)}, f"room {room.room_id}")
+
+    def _append(self, payload: dict, label: str) -> None:
         try:
-            line = json.dumps({"record": asdict(game), "rows": record_rows(game, self._llm_endpoint)})
+            line = json.dumps(payload)
             with self._lock, open(self._path, "a", encoding="utf-8") as handle:
                 handle.write(line + "\n")
         except (OSError, TypeError, ValueError):
-            log.exception("Failed to write game %s to %s", game.game_id, self._path)
+            log.exception("Failed to write %s to %s", label, self._path)

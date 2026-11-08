@@ -52,6 +52,35 @@ CREATE TABLE IF NOT EXISTS {fq}.guesses (
 ) COMMENT 'Each player verdict: was the stranger an AI or a human?'
 """)
 
+# Group chat mode: rooms of several players plus hidden AIs, then a vote.
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq}.rooms (
+  room_id STRING NOT NULL, llm_endpoint STRING, started_at TIMESTAMP, chat_closed_at TIMESTAMP,
+  finished_at TIMESTAMP, human_count INT, ai_count INT, message_count INT
+) COMMENT 'One row per finished group room'
+""")
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq}.room_seats (
+  room_id STRING NOT NULL, alias STRING, sender_kind STRING, persona STRING, player_nickname STRING,
+  voted_ai INT, votes INT
+) COMMENT 'Everyone in a room, human or AI, with how many players voted them AI'
+""")
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq}.room_messages (
+  room_id STRING NOT NULL, seq INT, alias STRING, sender_kind STRING, persona STRING,
+  sender_nickname STRING, text STRING, sent_at TIMESTAMP
+) COMMENT 'Every group chat message; sender_kind is human or ai'
+""")
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {fq}.room_votes (
+  room_id STRING NOT NULL, voter_nickname STRING, target_alias STRING, target_kind STRING,
+  target_persona STRING, vote STRING, correct BOOLEAN
+) COMMENT 'Each player verdict on each other room member'
+""")
+
 display(spark.sql(f"SHOW TABLES IN {fq}"))
 
 # COMMAND ----------
@@ -66,9 +95,9 @@ display(spark.sql(f"SHOW TABLES IN {fq}"))
 if app_sp:
     spark.sql(f"GRANT USE CATALOG ON CATALOG `{catalog}` TO `{app_sp}`")
     spark.sql(f"GRANT USE SCHEMA ON SCHEMA {fq} TO `{app_sp}`")
-    for table in ("games", "messages", "guesses"):
+    for table in ("games", "messages", "guesses", "rooms", "room_seats", "room_messages", "room_votes"):
         # Least privilege: the app only appends rows; it never reads or creates tables.
         spark.sql(f"GRANT MODIFY ON TABLE {fq}.{table} TO `{app_sp}`")
-    print(f"Granted {app_sp} insert access on {fq}.games/messages/guesses")
+    print(f"Granted {app_sp} insert access on the game and room tables in {fq}")
 else:
     print("No app service principal given; skipping grants.")

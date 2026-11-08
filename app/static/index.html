@@ -31,9 +31,16 @@
         <div class="lobby-grid">
           <form id="join-form" class="card join">
             <label for="nickname" class="eyebrow">Pick a nickname</label>
-            <div class="row">
-              <input id="nickname" maxlength="20" autocomplete="off" placeholder="e.g. reveille" required>
-              <button type="submit" class="btn yellow">Find a stranger</button>
+            <input id="nickname" maxlength="20" autocomplete="off" placeholder="e.g. reveille" required>
+            <div class="modes">
+              <button type="submit" class="mode-btn yellow">
+                <span class="mode-name">1-on-1</span>
+                <span class="mode-desc">One stranger. Human or AI?</span>
+              </button>
+              <button type="button" id="join-group" class="mode-btn dark">
+                <span class="mode-name">Group chat</span>
+                <span class="mode-desc">4–6 people, hidden AIs. Vote them out.</span>
+              </button>
             </div>
             <p class="hint wake" id="server-status" role="status" hidden>
               <span class="spinner" aria-hidden="true"></span>Waking up the game server… this can take up to a minute on the first visit.
@@ -59,8 +66,8 @@
       <section id="screen-search" class="screen" hidden>
         <div class="card center search">
           <div class="pulse" aria-hidden="true"></div>
-          <h2>Connecting you to a stranger…</h2>
-          <p class="muted">Could be a person. Could be a machine.</p>
+          <h2 id="search-title">Connecting you to a stranger…</h2>
+          <p class="muted" id="search-sub">Could be a person. Could be a machine.</p>
           <button id="cancel-search" class="btn">Cancel</button>
         </div>
       </section>
@@ -104,6 +111,47 @@
           </div>
         </div>
       </section>
+
+      <!-- Group chat: room + vote + reveal -->
+      <section id="screen-room" class="screen room" hidden>
+        <div class="chat card room-chat">
+          <div class="chat-head">
+            <div class="who"><span class="live" aria-hidden="true"></span>Group chat</div>
+            <div class="timer num" id="room-timer" aria-live="off">3:00</div>
+          </div>
+          <div class="progress"><div id="room-progress"></div></div>
+          <ul class="members" id="room-members" aria-label="People in this chat"></ul>
+          <ol id="room-messages" class="messages" aria-live="polite"></ol>
+          <form id="room-form" class="composer">
+            <input id="room-input" maxlength="300" autocomplete="off" placeholder="Say something to the group…" aria-label="Message">
+            <button type="submit" class="btn primary">Send</button>
+          </form>
+          <div class="chat-foot">
+            <span class="hint error" id="room-error" role="alert"></span>
+            <span class="hint">Some of these people are AIs. You'll vote when the timer ends.</span>
+          </div>
+        </div>
+
+        <form id="vote-panel" class="card vote" hidden>
+          <p class="eyebrow">The vote · <span id="vote-timer" class="num">0:45</span> left</p>
+          <h2>Who's the impostor?</h2>
+          <p class="muted">Mark everyone. There could be one AI or several.</p>
+          <ol class="ballot" id="ballot"></ol>
+          <p class="hint error" id="vote-error" role="alert"></p>
+          <button type="submit" class="btn yellow" id="vote-submit" disabled>Lock in my votes</button>
+        </form>
+
+        <div id="room-result" class="card result room-result" hidden>
+          <p class="eyebrow">The reveal</p>
+          <h2 id="room-result-title"></h2>
+          <p id="room-result-points" class="points num"></p>
+          <ol class="reveal-list" id="reveal-list"></ol>
+          <div class="row center-row">
+            <button id="room-again" class="btn yellow">New group</button>
+            <button id="room-lobby" class="btn">Lobby</button>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -112,5 +160,6 @@
   </footer>
   <script src="static/config.js"></script>
   <script src="static/app.js"></script>
+  <script src="static/group.js"></script>
 </body>
 </html>

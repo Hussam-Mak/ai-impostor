@@ -17,6 +17,9 @@ from .ai_player import AIResponder, ChatModel, DatabricksChatModel, MockChatMode
 from .config import Settings, load_settings
 from .game import GameError, GameManager
 from .ratelimit import RateLimiter
+from .room_api import add_room_routes
+from .rooms import RoomManager
+from .rooms_ai import GroupAIResponder
 from .storage import DeltaRecorder, GameRecorder, JsonlRecorder
 
 log = logging.getLogger(__name__)
@@ -73,7 +76,7 @@ def _workspace_client():  # -> WorkspaceClient | None
         return None
 
 
-def build_services(settings: Settings) -> tuple[GameManager, dict]:
+def build_services(settings: Settings) -> tuple[GameManager, RoomManager, dict]:
     client = _workspace_client()
     model: ChatModel = DatabricksChatModel(client, settings.llm_endpoint) if client else MockChatModel()
     recorder: GameRecorder
@@ -88,8 +91,18 @@ def build_services(settings: Settings) -> tuple[GameManager, dict]:
     responder = AIResponder(model, budget=budget)
     manager = GameManager(settings, on_ai_turn=responder.on_ai_turn, on_game_finished=recorder.record)
     responder.bind(manager)
+    group_ai = GroupAIResponder(model, budget=budget)  # shares the hourly LLM budget
+    rooms = RoomManager(
+        manager,
+        room_seconds=settings.room_seconds,
+        max_message_chars=settings.max_message_chars,
+        min_seconds_between_messages=settings.min_seconds_between_messages,
+        on_ai_turn=group_ai.on_ai_turn,
+        on_room_finished=recorder.record_room,
+    )
+    group_ai.bind(rooms)
     log.info("AI Impostor ready (AI: %s)", settings.llm_endpoint if client else "mock")
-    return manager, {"mode": "databricks" if client else "offline"}
+    return manager, rooms, {"mode": "databricks" if client else "offline"}
 
 
 def client_key(request: Request, *, on_databricks: bool | None = None, proxy_hops: int = 1) -> str:
@@ -117,10 +130,13 @@ def create_app(
     join_limiter: RateLimiter | None = None,
     match_limiter: RateLimiter | None = None,
     settings: Settings | None = None,
+    rooms: RoomManager | None = None,
 ) -> FastAPI:
     if manager is None:
         settings = settings or load_settings()
-        manager, info = build_services(settings)
+        manager, rooms, info = build_services(settings)
+    if rooms is None:  # tests pass only a GameManager; rooms then run without AI turns
+        rooms = RoomManager(manager)
     runtime_info = info or {}
     origins = list(settings.allowed_origins) if settings else []
     proxy_hops = settings.proxy_hops if settings else 1
@@ -152,6 +168,8 @@ def create_app(
     def limit(limiter: RateLimiter, request: Request) -> None:
         if not limiter.allow(client_key(request, proxy_hops=proxy_hops)):
             raise HTTPException(429, "Too many requests. Take a breather and try again.")
+
+    add_room_routes(app, rooms, lambda request: limit(matches, request))
 
     @app.get("/api/health")
     def health() -> dict:
