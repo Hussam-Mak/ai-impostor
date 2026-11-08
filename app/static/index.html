@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Impostor</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">?</span> AI Impostor</div>
+    <div class="me" id="me" hidden></div>
+  </header>
+
+  <main>
+    <!-- Lobby -->
+    <section id="screen-lobby" class="screen">
+      <div class="hero">
+        <h1>Human… or <em>impostor</em>?</h1>
+        <p>You get two minutes to chat with a stranger. It might be another player. It might be an AI
+           running on Databricks pretending to be human. Then you decide.</p>
+      </div>
+      <form id="join-form" class="card join">
+        <label for="nickname">Pick a nickname</label>
+        <div class="row">
+          <input id="nickname" maxlength="20" autocomplete="off" placeholder="e.g. reveille" required>
+          <button type="submit" class="primary">Find a stranger</button>
+        </div>
+        <p class="hint" id="join-error" role="alert"></p>
+        <p class="hint">Chats are saved anonymously (nickname + messages) to study how people spot AI. Don't share personal info.</p>
+      </form>
+      <div class="grid">
+        <div class="card">
+          <h2>Leaderboard</h2>
+          <ol id="leaderboard" class="leaderboard"><li class="muted">No games yet. Be first.</li></ol>
+        </div>
+        <div class="card">
+          <h2>Live stats</h2>
+          <dl id="stats" class="stats"></dl>
+          <p class="hint" id="runtime"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Searching -->
+    <section id="screen-search" class="screen" hidden>
+      <div class="card center">
+        <div class="pulse" aria-hidden="true"></div>
+        <h2>Connecting you to a stranger…</h2>
+        <p class="muted">Could be a person. Could be a machine.</p>
+        <button id="cancel-search" class="ghost">Cancel</button>
+      </div>
+    </section>
+
+    <!-- Chat + guess + result -->
+    <section id="screen-game" class="screen" hidden>
+      <div class="chat card">
+        <div class="chat-head">
+          <div><span class="dot" aria-hidden="true"></span> Stranger</div>
+          <div class="timer" id="timer" aria-live="off">2:00</div>
+        </div>
+        <div class="progress"><div id="progress-bar"></div></div>
+        <ol id="messages" class="messages" aria-live="polite"></ol>
+        <form id="message-form" class="composer">
+          <input id="message-input" maxlength="300" autocomplete="off" placeholder="Say something…" aria-label="Message">
+          <button type="submit" class="primary">Send</button>
+        </form>
+        <div class="chat-foot">
+          <span class="hint" id="chat-error" role="alert"></span>
+          <button id="guess-early" class="link">I already know → guess now</button>
+        </div>
+      </div>
+
+      <div id="guess-panel" class="card guess" hidden>
+        <h2 id="guess-title">Time's up. Who were you talking to?</h2>
+        <div class="choices">
+          <button class="choice human" data-guess="human"><span class="emoji" aria-hidden="true">🧑</span>A human</button>
+          <button class="choice ai" data-guess="ai"><span class="emoji" aria-hidden="true">🤖</span>An AI</button>
+        </div>
+      </div>
+
+      <div id="result-panel" class="card result" hidden>
+        <div id="result-badge" class="badge"></div>
+        <h2 id="result-title"></h2>
+        <p id="result-detail" class="muted"></p>
+        <p id="result-points" class="points"></p>
+        <div class="row center-row">
+          <button id="play-again" class="primary">Play again</button>
+          <button id="back-lobby" class="ghost">Lobby</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">Built on Databricks Apps · Model Serving · Unity Catalog · MLflow</footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

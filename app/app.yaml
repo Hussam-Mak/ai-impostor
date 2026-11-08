@@ -1,0 +1,18 @@
+# Databricks Apps runtime config.
+# Resource names (llm-endpoint, sql-warehouse) are bound in ../databricks.yml.
+command: ["python", "main.py"]
+
+env:
+  - name: LLM_ENDPOINT
+    valueFrom: llm-endpoint
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  # Must match the catalog/schema variables in databricks.yml.
+  - name: IMPOSTOR_CATALOG
+    value: workspace
+  - name: IMPOSTOR_SCHEMA
+    value: ai_impostor
+  - name: IMPOSTOR_ROUND_SECONDS
+    value: "120"
+  - name: IMPOSTOR_HUMAN_MATCH_PROBABILITY
+    value: "0.6"

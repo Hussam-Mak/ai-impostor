@@ -1,0 +1,36 @@
+resources:
+  jobs:
+    impostor_setup:
+      name: ai-impostor-setup
+      description: Create the Unity Catalog schema and tables, and grant the app access.
+      tasks:
+        - task_key: setup_tables
+          notebook_task:
+            notebook_path: ../notebooks/00_setup_tables.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              app_service_principal: ${resources.apps.ai_impostor.service_principal_client_id}
+
+    impostor_insights:
+      name: ai-impostor-insights
+      description: Refresh game analytics and retrain the AI-message detector (MLflow + UC model registry).
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"  # hourly while the event runs
+        timezone_id: America/Chicago
+        pause_status: PAUSED
+      tasks:
+        - task_key: game_analytics
+          notebook_task:
+            notebook_path: ../notebooks/01_game_analytics.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        - task_key: train_ai_detector
+          depends_on:
+            - task_key: game_analytics
+          notebook_task:
+            notebook_path: ../notebooks/02_train_ai_detector.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}

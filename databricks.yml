@@ -1,0 +1,30 @@
+# Databricks Asset Bundle for AI Impostor.
+#   databricks bundle validate
+#   databricks bundle deploy --var warehouse_id=<your-warehouse-id>
+#   databricks bundle run ai_impostor        # start the app
+#   databricks bundle run impostor_insights  # analytics + train the AI detector
+bundle:
+  name: ai-impostor
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for game data (Free Edition default is "workspace").
+    default: workspace
+  schema:
+    description: Schema that holds the games, messages and guesses tables.
+    default: ai_impostor
+  warehouse_id:
+    description: ID of the SQL warehouse the app writes through (SQL Warehouses > your warehouse > Connection details).
+  llm_endpoint:
+    description: Foundation Model API chat endpoint that plays the impostor.
+    default: databricks-meta-llama-3-3-70b-instruct
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      root_path: ~/.bundle/${bundle.name}/${bundle.target}

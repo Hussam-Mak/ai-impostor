@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Impostor</title>
+  <meta name="description" content="A Turing-test chat game built on Databricks: talk to a stranger for two minutes, then guess if they were a human or an AI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true">?</span>AI Impostor</a>
+    <nav aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#databricks">Built on Databricks</a>
+      <a href="https://github.com/Hussam-Mak/ai-impostor">Code</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">TAMU Datathon 2026 · Databricks challenge</p>
+        <h1 id="hero-title">Human…<br>or <span class="accent">impostor?</span></h1>
+        <p class="lede">Chat with a stranger for two minutes. It might be another player. It might be an LLM
+          on Databricks pretending to be a sleep-deprived CS student. Then you decide.</p>
+        <div class="cta-row">
+          <a class="btn primary" id="play-link" href="#run">Play now</a>
+          <a class="btn ghost" href="#run">Run it in your workspace</a>
+        </div>
+        <p class="note" id="play-note">The game runs as a Databricks App, so you sign in with your workspace account.</p>
+      </div>
+
+      <figure class="demo" aria-label="Example round">
+        <div class="phone">
+          <div class="phone-head">
+            <span><span class="dot" aria-hidden="true"></span>Stranger</span>
+            <span class="timer" id="demo-timer">1:42</span>
+          </div>
+          <ol class="chat" id="demo-chat" aria-live="off"></ol>
+          <div class="verdict" id="demo-verdict" hidden>
+            <span class="badge">Fooled!</span>
+            <strong>It was an AI playing "jay".</strong>
+            <span class="muted">Llama 3.3 70B on Databricks Model Serving</span>
+          </div>
+        </div>
+        <figcaption>A real kind of round: lowercase, a typo, a dodge. Would you have caught it?</figcaption>
+      </figure>
+    </section>
+
+    <section id="how" class="section" aria-labelledby="how-title">
+      <h2 id="how-title">How a round works</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num">01</span>
+          <h3>Get matched</h3>
+          <p>You join a queue. If another player is waiting you may get them; otherwise you get the AI.
+            Every match takes 3 to 9 seconds either way, so the wait gives nothing away.</p>
+        </li>
+        <li>
+          <span class="step-num">02</span>
+          <h3>Chat for two minutes</h3>
+          <p>Ask anything. The AI plays one of four personas with a backstory, a texting style, typing delays,
+            and the occasional typo. It can even end the chat early, just like a person can.</p>
+        </li>
+        <li>
+          <span class="step-num">03</span>
+          <h3>Make the call</h3>
+          <p>Human or AI? Correct guesses score 100 points plus a streak bonus. Against another human, you
+            also score by seeming human yourself.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="databricks" class="section" aria-labelledby="db-title">
+      <h2 id="db-title">Everything runs on Databricks</h2>
+      <p class="section-lede">Each round becomes data. That data trains a model that tries to beat the players at spotting the impostor.</p>
+      <div class="bento">
+        <article class="tile wide">
+          <p class="tile-tag">Databricks Apps</p>
+          <h3>The game</h3>
+          <p>FastAPI backend and a no-build chat UI, deployed with one Asset Bundle command. Matchmaking, timers and scoring live in the app.</p>
+        </article>
+        <article class="tile">
+          <p class="tile-tag">Model Serving</p>
+          <h3>The impostor</h3>
+          <p>Foundation Model API chat endpoint, prompted to stay in character and "humanized" after every reply.</p>
+        </article>
+        <article class="tile">
+          <p class="tile-tag">Unity Catalog</p>
+          <h3>Every word logged</h3>
+          <p>Games, messages and guesses land in Delta tables through a SQL warehouse, using parameterized SQL and insert-only grants.</p>
+        </article>
+        <article class="tile">
+          <p class="tile-tag">AI/BI-ready views</p>
+          <h3>Who gets fooled</h3>
+          <p>Detection accuracy, fool rate per persona, accuracy vs. chat length, and how AI and human texting styles differ.</p>
+        </article>
+        <article class="tile wide accent-tile">
+          <p class="tile-tag">MLflow + UC model registry</p>
+          <h3>Model vs. humans</h3>
+          <p>A text classifier learns the "AI tells" from every message, gets registered in Unity Catalog, and is scored against the players on the same held-out games. An hourly Job retrains it as more rounds come in.</p>
+        </article>
+      </div>
+      <pre class="flow" aria-label="Data flow"><code>player ─► Databricks App ─► Model Serving (the impostor)
+              │
+              └─► SQL warehouse ─► UC Delta tables ─► analytics views ─► dashboard
+                                          └────────► MLflow detector ─► UC model registry</code></pre>
+    </section>
+
+    <section id="run" class="section" aria-labelledby="run-title">
+      <h2 id="run-title">Run it in your workspace</h2>
+      <p class="section-lede">Works on Databricks Free Edition. You need the Databricks CLI and a SQL warehouse ID.</p>
+      <ol class="commands">
+        <li><code>git clone https://github.com/Hussam-Mak/ai-impostor.git && cd ai-impostor</code></li>
+        <li><code>databricks bundle deploy --var warehouse_id=&lt;id&gt;</code></li>
+        <li><code>databricks bundle run impostor_setup --var warehouse_id=&lt;id&gt;</code></li>
+        <li><code>databricks bundle run ai_impostor --var warehouse_id=&lt;id&gt;</code></li>
+      </ol>
+      <p class="note">Full setup, settings and local offline mode are in the <a href="https://github.com/Hussam-Mak/ai-impostor#readme">README</a>.</p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>AI Impostor · TAMU Datathon 2026</span>
+    <a href="https://github.com/Hussam-Mak/ai-impostor">GitHub</a>
+  </footer>
+  <script src="site.js"></script>
+</body>
+</html>

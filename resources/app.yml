@@ -1,0 +1,17 @@
+resources:
+  apps:
+    ai_impostor:
+      name: ai-impostor
+      description: "AI Impostor: chat with a stranger, then guess if they were a human or an AI."
+      source_code_path: ../app
+      resources:
+        - name: llm-endpoint
+          description: Chat model that plays the AI impostor
+          serving_endpoint:
+            name: ${var.llm_endpoint}
+            permission: CAN_QUERY
+        - name: sql-warehouse
+          description: Warehouse used to log games into Unity Catalog
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE

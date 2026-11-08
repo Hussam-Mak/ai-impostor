@@ -1,0 +1,7 @@
+.claude/
+.coverage
+.databricks/
+.pytest_cache/
+.venv/
+__pycache__/
+local_data/
