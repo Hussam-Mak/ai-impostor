@@ -2,7 +2,7 @@
 
 **Chat with a stranger for two minutes. Then decide: human, or AI?**
 
-**Project site:** https://hussam-mak.github.io/ai-impostor/ · The game itself runs as a Databricks App (see Deploy below).
+**Project site:** https://hussam-mak.github.io/ai-impostor/ · **Play:** https://ai-impostor-7474657692011817.aws.databricksapps.com (Databricks App; workspace sign-in required)
 
 AI Impostor is a Turing-test game built entirely on Databricks. Each round pairs you with either another
 player or an LLM pretending to be a person. You chat, you guess, and every message and verdict lands in
